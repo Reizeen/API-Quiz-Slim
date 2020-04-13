@@ -3,19 +3,40 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 require __DIR__ . '/../vendor/autoload.php';
-require __DIR__ . '/../modelo/QueryDB.php';
+require __DIR__ . '/../model/QueryDB.php';
+require __DIR__ . '/../model/Temas.php';
 
-$app = new \Slim\App(['debug'=>true]);
+$config = include('config.php');
 
-// Instanciar la clase de las consultas
+$app = new \Slim\App([
+    'debug'=> true,
+    'settings' => $config
+]);
+
+
+/**
+ * Service factory for the ORM Eloquent
+ */
+$container = $app->getContainer();
+
+$capsule = new \Illuminate\Database\Capsule\Manager;
+$capsule->addConnection($container['settings']['db']);
+$capsule->setAsGlobal();
+$capsule->bootEloquent();
+
+
+/**
+ * Instanciar la clase de las consultas de SQL 
+ */
 $query = new QueryDB();
+
 
 /**
  * Todos los temas
  */
-$app->get('/temas', function(Request $request, Response $response, $args) use($query){
+$app->get('/temas', function(Request $request, Response $response, $args) {
     try {
-        return $response->withJson($query->getTemas());
+        return $response->withJson(Temas::all());
     } catch (Exception $e){
          return $response->withJson([
                     'error' => 1,
