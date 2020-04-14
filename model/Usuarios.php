@@ -2,9 +2,10 @@
 
     use Illuminate\Database\Eloquent\Model;
     
-    class Temas extends Model {
-        protected $table = 'temas';
+    class Usuarios extends Model {
+        protected $table = 'usuarios';
         public $timestamps = false; // Elimina los campos de tiempo. 
+
         
     }
 
