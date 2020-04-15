@@ -198,6 +198,22 @@ $app->get('/puntos', function(Request $request, Response $response, $args){
 });
 
 /**
+ * Consultar puntos de un usuario especifico
+ */
+$app->get('/puntos/{user}', function(Request $request, Response $response, $args){
+    
+    $user_name = $args['user'];
+
+    try {
+        return $response->withJson(Puntos::all()->where('usuarios_name', $user_name)->first());
+    } catch (Exception $e){
+         return $response->withJson([
+                    'error' => 1,
+                    'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
+    }
+});
+
+/**
  * Consultar preguntas de un usuario especifico
  */
 $app->get('/preguntas/{usuario}', function(Request $request, Response $response, $args){
