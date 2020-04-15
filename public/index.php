@@ -6,6 +6,7 @@ require __DIR__ . '/../vendor/autoload.php';
 require __DIR__ . '/../model/Temas.php';
 require __DIR__ . '/../model/Preguntas.php';
 require __DIR__ . '/../model/Usuarios.php';
+require __DIR__ . '/../model/Puntos.php';
 
 $config = include('config.php');
 
@@ -33,30 +34,49 @@ $capsule->bootEloquent();
   =============================================== */
 
 /**
- * Registro de usuarios con la contraseña encriptada. 
+ * Registro de usuarios con la contraseña encriptada.
+ * Se registra la informacion inicial de los puntos con 0 puntos 
  */
 $app->post('/signup', function(Request $request, Response $response, $args) {
+   
     $data = $request->getParsedBody();
-    $user = new Usuarios();
-    $user->name = $data['name'];
-    $user->email = $data['email'];
-
-    // Encriptacion de la contraseña con HASH
-    $password = $data['pass'];
-    $password_encript = password_hash($password, PASSWORD_DEFAULT, array("cost"=>15));
-    $user->pass = $password_encript;
+    $user_name = $data['name'];
+    $user_email = $data['email'];
 
     try {
+        $user = new Usuarios();
+        $user->name = $user_name;
+        $user->email = $user_email;
+
+        // Encriptacion de la contraseña con HASH
+        $password = $data['pass'];
+        $password_encript = password_hash($password, PASSWORD_DEFAULT, array("cost"=>15));
+        $user->pass = $password_encript;
         $user->save();
-        return $response->withJson([
-            'signout' => true,
-            'desc' => 'Usuario registrado satisfactoriamente'], 201);
 
     } catch (Exception $e){
          return $response->withJson([
                     'error' => 1,
                     'desc' => 'Error al registrar al usuario' . $e->getMessage()], 400);
     }
+
+    try {
+        // Crear la puntuacion inicial del usuario
+        $puntos = new Puntos();
+        $puntos->puntos = 0;
+        $puntos->usuarios_name = $user_name;
+        $puntos->save();
+
+    } catch (Exception $e){
+        return $response->withJson([
+                   'error' => 1,
+                   'desc' => 'Error al registrar la puntuacion inicial del usuario' . $e->getMessage()], 400);
+   }
+
+   return $response->withJson([
+    'resp' => true,
+    'desc' => 'Usuario registrado satisfactoriamente'], 201);
+
 });
 
 
@@ -75,13 +95,52 @@ $app->post('/signin', function(Request $request, Response $response, $args) {
         // Comprobar contraseña con la contraseña encriptada. 
         if (password_verify($pass_login, $pass_user)){
             return $response->withJson([
-                'signin' => true,
+                'resp' => true,
                 'desc' => 'Inicio de sesion satisfactorio'], 200);
-        } else {
-            return $response->withJson([
-                'signin' => false,
-                'desc' => 'Usuario no verificado'], 401);
         }
+
+        return $response->withJson([
+            'resp' => false,
+            'desc' => 'Usuario no verificado'], 401);
+        
+    } catch (Exception $e){
+            return $response->withJson([
+                    'error' => 1,
+                    'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
+    }
+});
+
+
+/**
+ * Cambiar contraseña por parte del usuario
+ */
+$app->put('/user/{user_name}', function(Request $request, Response $response, $args) {
+    
+    $user_name = $args['user_name'];
+    $data = $request->getParsedBody();
+    $pass = $data['pass'];
+    $new_pass = $data['new_pass'];
+
+    try {
+        $user = Usuarios::all()->where("name", $user_name)->first();
+        $pass_user = $user['pass'];
+
+        // Comprobar contraseña con la contraseña encriptada. 
+        if (password_verify($pass, $pass_user)){
+
+            // Encriptacion de la contraseña con HASH
+            $password_encript = password_hash($new_pass, PASSWORD_DEFAULT, array("cost"=>15));
+            $user->pass = $password_encript;
+            $user->save();
+
+            return $response->withJson([
+                'resp' => true,
+                'desc' => 'Contraseña cambiada satisfactoriamente'], 201);       
+        } 
+
+        return $response->withJson([
+            'resp' => $pass,
+            'desc' => 'Contraseña actual incorrecta'], 401);
 
     } catch (Exception $e){
             return $response->withJson([
@@ -97,7 +156,7 @@ $app->post('/signin', function(Request $request, Response $response, $args) {
   =============================================== */
 
 /**
- * Todos los temas
+ * Mostrar todos los temas
  */
 $app->get('/temas', function(Request $request, Response $response, $args) {
     try {
@@ -110,9 +169,10 @@ $app->get('/temas', function(Request $request, Response $response, $args) {
 });
 
 /**
- * Consultar 5 preguntas aleatorias segun el tema especificado. 
+ * Consultar 5 preguntas aleatorias segun el tema especificado 
+ * para el desarrollo del juego quiz.  
  */
-$app->get('/quest/{tema}', function(Request $request, Response $response, $args){
+$app->get('/quiz/{tema}', function(Request $request, Response $response, $args){
 
     $tema = $args['tema'];
     try {
@@ -124,7 +184,64 @@ $app->get('/quest/{tema}', function(Request $request, Response $response, $args)
     }
 });
 
+/**
+ * Consultar punrtuaciones de los usuarios
+ */
+$app->get('/puntos', function(Request $request, Response $response, $args){
+    try {
+        return $response->withJson(Puntos::all());
+    } catch (Exception $e){
+         return $response->withJson([
+                    'error' => 1,
+                    'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
+    }
+});
 
+/**
+ * Consultar preguntas de un usuario especifico
+ */
+$app->get('/preguntas/{usuario}', function(Request $request, Response $response, $args){
+
+    $user = $args['usuario'];
+    try {
+        return $response->withJson(Preguntas::all()->where('user_name', $user));
+    } catch (Exception $e){
+         return $response->withJson([
+                    'error' => 1,
+                    'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
+    }
+});
+
+/**
+ * Consultar una pregunta especificoa
+ */
+$app->get('/pregunta/{id}', function(Request $request, Response $response, $args){
+
+    $id = $args['id'];
+    try {
+        return $response->withJson(Preguntas::all()->where('id', $id)->first());
+    } catch (Exception $e){
+         return $response->withJson([
+                    'error' => 1,
+                    'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
+    }
+});
+
+
+/**
+ * Mostrar informacion del usuario
+ */
+$app->get('/user/{usuario}', function(Request $request, Response $response, $args){
+
+    $user = $args['usuario'];
+    try {
+        return $response->withJson(Usuarios::all()->where('name', $user));
+    } catch (Exception $e){
+         return $response->withJson([
+                    'error' => 1,
+                    'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
+    }
+});
 
 
 /*===============================================
@@ -134,7 +251,7 @@ $app->get('/quest/{tema}', function(Request $request, Response $response, $args)
 /**
  * Registro de pregunta por parte del usuario.  
  */
-$app->post('/quest', function(Request $request, Response $response, $args) {
+$app->post('/pregunta', function(Request $request, Response $response, $args) {
     $data = $request->getParsedBody();
     $question = new Preguntas();
     $question->pregunta = $data['pregunta'];
@@ -142,7 +259,7 @@ $app->post('/quest', function(Request $request, Response $response, $args) {
     $question->respuno = $data['respuesta_uno'];
     $question->respdos = $data['respuesta_dos'];
     $question->resptres = $data['respuesta_tres'];
-    $question->usarios_name = $data['user'];
+    $question->user_name = $data['user'];
 
     $tema_name = $data['tema'];
     $tema = Temas::all()->where("name", $tema_name)->first();
@@ -151,7 +268,7 @@ $app->post('/quest', function(Request $request, Response $response, $args) {
     try {
         $question->save();
         return $response->withJson([
-            'signout' => true,
+            'resp' => true,
             'desc' => 'Pregunta guardada satisfactoriamente'], 201);
 
     } catch (Exception $e){
@@ -159,6 +276,83 @@ $app->post('/quest', function(Request $request, Response $response, $args) {
                     'error' => 1,
                     'desc' => 'Error al guardar la pregunta' . $e->getMessage()], 400);
     }
+});
+
+
+
+/*===============================================
+  ==================== PUT ======================
+  =============================================== */
+
+/**
+ * Modificar pregunta por parte del usuario.  
+ */
+$app->put('/pregunta/{id}', function(Request $request, Response $response, $args) {
+    
+    $id = $args['id'];
+    $data = $request->getParsedBody();
+    $pregunta = $data['pregunta'];
+    $respuesta_correcta = $data['respuesta_correcta'];
+    $respuesta_uno = $data['respuesta_uno'];
+    $respuesta_dos= $data['respuesta_dos'];
+    $respuesta_tres = $data['respuesta_tres'];
+
+    $tema_name = $data['tema'];
+    $tema = Temas::all()->where("name", $tema_name)->first();
+    $cod_tema = $tema['cod'];
+
+    try {
+
+        $question = Preguntas::all()->where('id', $id)->first();
+        $question->pregunta = $pregunta;
+        $question->respcorrect = $respuesta_correcta;
+        $question->respuno = $respuesta_uno;
+        $question->respdos = $respuesta_dos;
+        $question->resptres = $respuesta_tres;
+        $question->temas_cod = $cod_tema;
+        $question->save();
+
+        return $response->withJson([
+            'resp' => true,
+            'desc' => 'Pregunta modificada satisfactoriamente'], 201);
+
+    } catch (Exception $e){
+         return $response->withJson([
+                    'error' => 1,
+                    'desc' => 'Error al modificar la pregunta' . $e->getMessage()], 400);
+    }
+});
+
+
+/**
+ * Modificar puntos del usuario
+ */
+$app->put('/puntos', function(Request $request, Response $response, $args) {
+
+    $data = $request->getParsedBody();
+    $user = $data['user'];
+    $puntos_obtenidos = $data['puntos'];
+
+    try {
+        $puntos = Puntos::all()->where('usuarios_name', $user)->first();
+        $puntos_actuales = $puntos->puntos;
+
+        $puntos_totales = $puntos_obtenidos + $puntos_actuales;
+        $puntos->puntos = $puntos_totales;
+        $puntos->save();
+
+        return $response->withJson([
+            'resp' => true,
+            'desc' => 'Puntos añadidos satisfactoriamente'], 201);
+
+    } catch(Exception $e){
+        return $response->withJson([
+            'error' => 1,
+            'desc' => 'Error al modificar los puntos' . $e->getMessage()], 400);
+    }
+    
+
+
 });
 
 $app->run();
