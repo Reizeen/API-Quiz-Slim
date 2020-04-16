@@ -155,7 +155,7 @@ $app->put('/user/{user_name}', function(Request $request, Response $response, $a
         } 
 
         return $response->withJson([
-            'resp' => $pass,
+            'resp' => false,
             'desc' => 'Contraseña actual incorrecta'], 401);
 
     } catch (Exception $e){
@@ -250,7 +250,7 @@ $app->get('/puntos/{user}', function(Request $request, Response $response, $args
 /**
  * Consultar puntos de un usuario especifico
  */
-$app->get('/puntos/{user}', function(Request $request, Response $response, $args){
+/*$app->get('/puntos/{user}', function(Request $request, Response $response, $args){
     
     $user_name = $args['user'];
 
@@ -261,7 +261,7 @@ $app->get('/puntos/{user}', function(Request $request, Response $response, $args
                     'error' => 1,
                     'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
     }
-});
+});*/
 
 /**
  * Consultar preguntas de un usuario especifico
