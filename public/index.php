@@ -21,6 +21,12 @@ $app = new \Slim\App([
  * Service factory for the ORM Eloquent
  */
 $container = $app->getContainer();
+$container['logger'] = function($c) {
+    $logger = new \Monolog\Logger('LOG');
+    $file_handler = new \Monolog\Handler\StreamHandler('../logs/app.log');
+    $logger->pushHandler($file_handler);
+    return $logger;
+};
 
 $capsule = new \Illuminate\Database\Capsule\Manager;
 $capsule->addConnection($container['settings']['db']);
@@ -39,6 +45,8 @@ $capsule->bootEloquent();
  */
 $app->post('/signup', function(Request $request, Response $response, $args) {
    
+    $this["logger"]->debug('POST /signup');
+
     $data = $request->getParsedBody();
     $user_name = $data['name'];
     $user_email = $data['email'];
@@ -55,9 +63,10 @@ $app->post('/signup', function(Request $request, Response $response, $args) {
         $user->save();
 
     } catch (Exception $e){
-         return $response->withJson([
-                    'error' => 1,
-                    'desc' => 'Error al registrar al usuario' . $e->getMessage()], 400);
+        $this["logger"]->error("ERROR: {$e->getMessage()}");
+        return $response->withJson([
+                'error' => 1,
+                'desc' => 'Error al registrar al usuario' . $e->getMessage()], 400);
     }
 
     try {
@@ -68,6 +77,7 @@ $app->post('/signup', function(Request $request, Response $response, $args) {
         $puntos->save();
 
     } catch (Exception $e){
+        $this["logger"]->error("ERROR: {$e->getMessage()}");
         return $response->withJson([
                    'error' => 1,
                    'desc' => 'Error al registrar la puntuacion inicial del usuario' . $e->getMessage()], 400);
@@ -84,6 +94,9 @@ $app->post('/signup', function(Request $request, Response $response, $args) {
  * Login de usuarios, comprobando con la contraseña encriptada. 
  */
 $app->post('/signin', function(Request $request, Response $response, $args) {
+
+    $this["logger"]->debug('POST /signin');
+
     $data = $request->getParsedBody();
     $user_login = $data['name'];
     $pass_login = $data['pass'];
@@ -104,9 +117,10 @@ $app->post('/signin', function(Request $request, Response $response, $args) {
             'desc' => 'Usuario no verificado'], 401);
         
     } catch (Exception $e){
-            return $response->withJson([
-                    'error' => 1,
-                    'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
+        $this["logger"]->error("ERROR: {$e->getMessage()}");
+        return $response->withJson([
+                'error' => 1,
+                'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
     }
 });
 
@@ -116,6 +130,8 @@ $app->post('/signin', function(Request $request, Response $response, $args) {
  */
 $app->put('/user/{user_name}', function(Request $request, Response $response, $args) {
     
+    $this["logger"]->debug('PUT /user');
+
     $user_name = $args['user_name'];
     $data = $request->getParsedBody();
     $pass = $data['pass'];
@@ -143,9 +159,10 @@ $app->put('/user/{user_name}', function(Request $request, Response $response, $a
             'desc' => 'Contraseña actual incorrecta'], 401);
 
     } catch (Exception $e){
-            return $response->withJson([
-                    'error' => 1,
-                    'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
+        $this["logger"]->error("ERROR: {$e->getMessage()}");
+        return $response->withJson([
+                'error' => 1,
+                'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
     }
 });
 
@@ -159,12 +176,17 @@ $app->put('/user/{user_name}', function(Request $request, Response $response, $a
  * Mostrar todos los temas
  */
 $app->get('/temas', function(Request $request, Response $response, $args) {
+
+    $this["logger"]->debug('GET /temas');
+
     try {
         return $response->withJson(Temas::all());
+        
     } catch (Exception $e){
-         return $response->withJson([
-                    'error' => 1,
-                    'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
+        $this["logger"]->error("ERROR: {$e->getMessage()}");
+        return $response->withJson([
+                'error' => 1,
+                'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
     }
 });
 
@@ -174,13 +196,17 @@ $app->get('/temas', function(Request $request, Response $response, $args) {
  */
 $app->get('/quiz/{tema}', function(Request $request, Response $response, $args){
 
+    $this["logger"]->debug('GET /quiz');
+
     $tema = $args['tema'];
     try {
         return $response->withJson(Preguntas::all()->where('temas_cod', $tema)->random(5));
+
     } catch (Exception $e){
-         return $response->withJson([
-                    'error' => 1,
-                    'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
+        $this["logger"]->error("ERROR: {$e->getMessage()}");
+        return $response->withJson([
+                'error' => 1,
+                'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
     }
 });
 
@@ -188,12 +214,36 @@ $app->get('/quiz/{tema}', function(Request $request, Response $response, $args){
  * Consultar punrtuaciones de los usuarios
  */
 $app->get('/puntos', function(Request $request, Response $response, $args){
+
+    $this["logger"]->debug('GET /puntos');
+
     try {
         return $response->withJson(Puntos::all());
+
     } catch (Exception $e){
-         return $response->withJson([
-                    'error' => 1,
-                    'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
+        $this["logger"]->error("ERROR: {$e->getMessage()}");
+        return $response->withJson([
+                'error' => 1,
+                'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
+    }
+});
+
+/**
+ * Consultar puntos de un usuario especifico
+ */
+$app->get('/puntos/{user}', function(Request $request, Response $response, $args){
+    
+    $this["logger"]->debug('GET /puntos');
+
+    $user_name = $args['user'];
+    try {
+        return $response->withJson(Puntos::all()->where('usuarios_name', $user_name)->first());
+
+    } catch (Exception $e){
+        $this["logger"]->error("ERROR: {$e->getMessage()}");
+        return $response->withJson([
+                'error' => 1,
+                'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
     }
 });
 
@@ -202,13 +252,17 @@ $app->get('/puntos', function(Request $request, Response $response, $args){
  */
 $app->get('/preguntas/{usuario}', function(Request $request, Response $response, $args){
 
+    $this["logger"]->debug('GET /preguntas');
+
     $user = $args['usuario'];
     try {
         return $response->withJson(Preguntas::all()->where('user_name', $user));
+
     } catch (Exception $e){
-         return $response->withJson([
-                    'error' => 1,
-                    'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
+        $this["logger"]->error("ERROR: {$e->getMessage()}");
+        return $response->withJson([
+                'error' => 1,
+                'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
     }
 });
 
@@ -217,13 +271,17 @@ $app->get('/preguntas/{usuario}', function(Request $request, Response $response,
  */
 $app->get('/pregunta/{id}', function(Request $request, Response $response, $args){
 
+    $this["logger"]->debug('GET /pregunta');
+
     $id = $args['id'];
     try {
         return $response->withJson(Preguntas::all()->where('id', $id)->first());
+
     } catch (Exception $e){
-         return $response->withJson([
-                    'error' => 1,
-                    'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
+        $this["logger"]->error("ERROR: {$e->getMessage()}");
+        return $response->withJson([
+                'error' => 1,
+                'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
     }
 });
 
@@ -233,13 +291,17 @@ $app->get('/pregunta/{id}', function(Request $request, Response $response, $args
  */
 $app->get('/user/{usuario}', function(Request $request, Response $response, $args){
 
+    $this["logger"]->debug('GET /user');
+
     $user = $args['usuario'];
     try {
         return $response->withJson(Usuarios::all()->where('name', $user));
+
     } catch (Exception $e){
-         return $response->withJson([
-                    'error' => 1,
-                    'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
+        $this["logger"]->error("ERROR: {$e->getMessage()}");
+        return $response->withJson([
+                'error' => 1,
+                'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
     }
 });
 
@@ -252,6 +314,9 @@ $app->get('/user/{usuario}', function(Request $request, Response $response, $arg
  * Registro de pregunta por parte del usuario.  
  */
 $app->post('/pregunta', function(Request $request, Response $response, $args) {
+
+    $this["logger"]->debug('POST /preguntas');
+
     $data = $request->getParsedBody();
     $question = new Preguntas();
     $question->pregunta = $data['pregunta'];
@@ -272,9 +337,10 @@ $app->post('/pregunta', function(Request $request, Response $response, $args) {
             'desc' => 'Pregunta guardada satisfactoriamente'], 201);
 
     } catch (Exception $e){
-         return $response->withJson([
-                    'error' => 1,
-                    'desc' => 'Error al guardar la pregunta' . $e->getMessage()], 400);
+        $this["logger"]->error("ERROR: {$e->getMessage()}");
+        return $response->withJson([
+                'error' => 1,
+                'desc' => 'Error al guardar la pregunta' . $e->getMessage()], 400);
     }
 });
 
@@ -289,6 +355,8 @@ $app->post('/pregunta', function(Request $request, Response $response, $args) {
  */
 $app->put('/pregunta/{id}', function(Request $request, Response $response, $args) {
     
+    $this["logger"]->debug('PUT /pregunta');
+
     $id = $args['id'];
     $data = $request->getParsedBody();
     $pregunta = $data['pregunta'];
@@ -302,7 +370,6 @@ $app->put('/pregunta/{id}', function(Request $request, Response $response, $args
     $cod_tema = $tema['cod'];
 
     try {
-
         $question = Preguntas::all()->where('id', $id)->first();
         $question->pregunta = $pregunta;
         $question->respcorrect = $respuesta_correcta;
@@ -317,9 +384,10 @@ $app->put('/pregunta/{id}', function(Request $request, Response $response, $args
             'desc' => 'Pregunta modificada satisfactoriamente'], 201);
 
     } catch (Exception $e){
-         return $response->withJson([
-                    'error' => 1,
-                    'desc' => 'Error al modificar la pregunta' . $e->getMessage()], 400);
+        $this["logger"]->error("ERROR: {$e->getMessage()}");
+        return $response->withJson([
+                'error' => 1,
+                'desc' => 'Error al modificar la pregunta' . $e->getMessage()], 400);
     }
 });
 
@@ -328,6 +396,8 @@ $app->put('/pregunta/{id}', function(Request $request, Response $response, $args
  * Modificar puntos del usuario
  */
 $app->put('/puntos', function(Request $request, Response $response, $args) {
+
+    $this["logger"]->debug('PUT /puntos');
 
     $data = $request->getParsedBody();
     $user = $data['user'];
@@ -346,6 +416,7 @@ $app->put('/puntos', function(Request $request, Response $response, $args) {
             'desc' => 'Puntos añadidos satisfactoriamente'], 201);
 
     } catch(Exception $e){
+        $this["logger"]->error("ERROR: {$e->getMessage()}");
         return $response->withJson([
             'error' => 1,
             'desc' => 'Error al modificar los puntos' . $e->getMessage()], 400);
