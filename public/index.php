@@ -40,26 +40,73 @@ $capsule->bootEloquent();
   =============================================== */
 
 /**
+ * Encriptar la contraseña
+ */
+function encriptPassword($password){
+    $password_encript = password_hash($password, PASSWORD_DEFAULT, array("cost"=>15));
+    return $password_encript;
+}
+
+/**
+ * Crear la puntuacion inicial para el usuario una vez registrado
+ */
+function puntuacionInicial($user_name){
+    $puntos = new Puntos();
+    $puntos->puntos = 0;
+    $puntos->usuarios_name = $user_name;
+    $puntos->save();
+}
+
+/**
+ * Comprobar si el nombre de usuario esta registrado
+ */
+function comprobarUsuario($user_name){
+    $user = Usuarios::all()->where("name", $user_name)->first();
+    $name = $user['name'];
+    if ($name == $user_name)
+        return true;
+    return false;
+}
+
+/**
+ * Comprobar si el email ya esta registrado
+ */
+function comprobarEmail($user_email){
+    $user = Usuarios::all()->where("email", $user_email)->first();
+    $email = $user['email'];
+    if ($email == $user_email)
+        return true;
+    return false;
+}
+
+
+/**
  * Registro de usuarios con la contraseña encriptada.
- * Se registra la informacion inicial de los puntos con 0 puntos 
+ * Se crea la puntuacion para el usuario con 0 puntos. 
  */
 $app->post('/signup', function(Request $request, Response $response, $args) {
    
     $this["logger"]->debug('POST /signup');
-
     $data = $request->getParsedBody();
     $user_name = $data['name'];
     $user_email = $data['email'];
+    $password = $data['pass'];
 
     try {
+        if (comprobarUsuario($user_name)){
+            return $response->withJson([
+                'resp' => false,
+                'desc' => 'Usuario ya registrado'], 200);
+        }
+        if (comprobarEmail($user_email)){
+            return $response->withJson([
+                'resp' => false,
+                'desc' => 'Email ya registrado'], 200);
+        }
         $user = new Usuarios();
         $user->name = $user_name;
         $user->email = $user_email;
-
-        // Encriptacion de la contraseña con HASH
-        $password = $data['pass'];
-        $password_encript = password_hash($password, PASSWORD_DEFAULT, array("cost"=>15));
-        $user->pass = $password_encript;
+        $user->pass = encriptPassword($password);
         $user->save();
 
     } catch (Exception $e){
@@ -68,13 +115,9 @@ $app->post('/signup', function(Request $request, Response $response, $args) {
                 'error' => 1,
                 'desc' => 'Error al registrar al usuario' . $e->getMessage()], 400);
     }
-
     try {
         // Crear la puntuacion inicial del usuario
-        $puntos = new Puntos();
-        $puntos->puntos = 0;
-        $puntos->usuarios_name = $user_name;
-        $puntos->save();
+        puntuacionInicial($user_name);
 
     } catch (Exception $e){
         $this["logger"]->error("ERROR: {$e->getMessage()}");
@@ -82,11 +125,9 @@ $app->post('/signup', function(Request $request, Response $response, $args) {
                    'error' => 1,
                    'desc' => 'Error al registrar la puntuacion inicial del usuario' . $e->getMessage()], 400);
    }
-
    return $response->withJson([
     'resp' => true,
     'desc' => 'Usuario registrado satisfactoriamente'], 201);
-
 });
 
 
@@ -111,7 +152,6 @@ $app->post('/signin', function(Request $request, Response $response, $args) {
                 'resp' => true,
                 'desc' => 'Inicio de sesion satisfactorio'], 200);
         }
-
         return $response->withJson([
             'resp' => false,
             'desc' => 'Usuario no verificado'], 401);
@@ -131,29 +171,23 @@ $app->post('/signin', function(Request $request, Response $response, $args) {
 $app->put('/user/{user_name}', function(Request $request, Response $response, $args) {
     
     $this["logger"]->debug('PUT /user');
-
     $user_name = $args['user_name'];
     $data = $request->getParsedBody();
-    $pass = $data['pass'];
+    $pass_actual = $data['pass'];
     $new_pass = $data['new_pass'];
 
     try {
         $user = Usuarios::all()->where("name", $user_name)->first();
-        $pass_user = $user['pass'];
+        $password_encript = $user['pass'];
 
-        // Comprobar contraseña con la contraseña encriptada. 
-        if (password_verify($pass, $pass_user)){
-
-            // Encriptacion de la contraseña con HASH
-            $password_encript = password_hash($new_pass, PASSWORD_DEFAULT, array("cost"=>15));
-            $user->pass = $password_encript;
+        if (password_verify($pass_actual, $password_encript)){
+            $user->pass = encriptPassword($new_pass);
             $user->save();
 
             return $response->withJson([
                 'resp' => true,
                 'desc' => 'Contraseña cambiada satisfactoriamente'], 201);       
         } 
-
         return $response->withJson([
             'resp' => false,
             'desc' => 'Contraseña actual incorrecta'], 401);
@@ -190,6 +224,7 @@ $app->get('/temas', function(Request $request, Response $response, $args) {
     }
 });
 
+
 /**
  * Consultar 5 preguntas aleatorias segun el tema especificado 
  * para el desarrollo del juego quiz.  
@@ -210,6 +245,7 @@ $app->get('/quiz/{tema}', function(Request $request, Response $response, $args){
     }
 });
 
+
 /**
  * Consultar punrtuaciones de los usuarios
  */
@@ -227,6 +263,7 @@ $app->get('/puntos', function(Request $request, Response $response, $args){
                 'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
     }
 });
+
 
 /**
  * Consultar puntos de un usuario especifico
@@ -247,21 +284,6 @@ $app->get('/puntos/{user}', function(Request $request, Response $response, $args
     }
 });
 
-/**
- * Consultar puntos de un usuario especifico
- */
-/*$app->get('/puntos/{user}', function(Request $request, Response $response, $args){
-    
-    $user_name = $args['user'];
-
-    try {
-        return $response->withJson(Puntos::all()->where('usuarios_name', $user_name)->first());
-    } catch (Exception $e){
-         return $response->withJson([
-                    'error' => 1,
-                    'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
-    }
-});*/
 
 /**
  * Consultar preguntas de un usuario especifico
@@ -281,6 +303,7 @@ $app->get('/preguntas/{usuario}', function(Request $request, Response $response,
                 'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
     }
 });
+
 
 /**
  * Consultar una pregunta especificoa
@@ -442,4 +465,8 @@ $app->put('/puntos', function(Request $request, Response $response, $args) {
 
 });
 
+
+/**
+ * Correr la API
+ */
 $app->run();
