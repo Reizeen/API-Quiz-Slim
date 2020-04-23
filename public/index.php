@@ -3,10 +3,10 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 require __DIR__ . '/../vendor/autoload.php';
-require __DIR__ . '/../model/Temas.php';
-require __DIR__ . '/../model/Preguntas.php';
-require __DIR__ . '/../model/Usuarios.php';
-require __DIR__ . '/../model/Puntos.php';
+require __DIR__ . '/../model/Themes.php';
+require __DIR__ . '/../model/Questions.php';
+require __DIR__ . '/../model/Users.php';
+require __DIR__ . '/../model/Points.php';
 
 $config = include('config.php');
 
@@ -50,20 +50,20 @@ function encriptPassword($password){
 /**
  * Crear la puntuacion inicial para el usuario una vez registrado
  */
-function puntuacionInicial($user_name){
-    $puntos = new Puntos();
-    $puntos->puntos = 0;
-    $puntos->usuarios_name = $user_name;
-    $puntos->save();
+function initialScore($user_id){
+    $points = new Points();
+    $points->points = 0;
+    $points->user_id = $user_id;
+    $points->save();
 }
 
 /**
  * Comprobar si el nombre de usuario esta registrado
  */
-function comprobarUsuario($user_name){
-    $user = Usuarios::all()->where("name", $user_name)->first();
+function checkUser($user_name){
+    $user = Users::where('name', $user_name)->first();
     $name = $user['name'];
-    if ($name == $user_name)
+    if (strcasecmp($name, $user_name) == 0)
         return true;
     return false;
 }
@@ -71,10 +71,10 @@ function comprobarUsuario($user_name){
 /**
  * Comprobar si el email ya esta registrado
  */
-function comprobarEmail($user_email){
-    $user = Usuarios::all()->where("email", $user_email)->first();
+function checkEmail($user_email){
+    $user = Users::where('email', $user_email)->first();
     $email = $user['email'];
-    if ($email == $user_email)
+    if (strcasecmp($email, $user_email) == 0)
         return true;
     return false;
 }
@@ -93,17 +93,17 @@ $app->post('/signup', function(Request $request, Response $response, $args) {
     $password = $data['pass'];
 
     try {
-        if (comprobarUsuario($user_name)){
+        if (checkUser($user_name)){
             return $response->withJson([
                 'resp' => false,
                 'desc' => 'Usuario ya registrado'], 200);
         }
-        if (comprobarEmail($user_email)){
+        if (checkEmail($user_email)){
             return $response->withJson([
                 'resp' => false,
                 'desc' => 'Email ya registrado'], 200);
         }
-        $user = new Usuarios();
+        $user = new Users();
         $user->name = $user_name;
         $user->email = $user_email;
         $user->pass = encriptPassword($password);
@@ -113,17 +113,18 @@ $app->post('/signup', function(Request $request, Response $response, $args) {
         $this["logger"]->error("ERROR: {$e->getMessage()}");
         return $response->withJson([
                 'error' => 1,
-                'desc' => 'Error al registrar al usuario' . $e->getMessage()], 400);
+                'desc' => 'Error al registrar al usuario ' . $e->getMessage()], 400);
     }
     try {
         // Crear la puntuacion inicial del usuario
-        puntuacionInicial($user_name);
+        $user_id = $user->id;
+        initialScore($user_id);
 
     } catch (Exception $e){
         $this["logger"]->error("ERROR: {$e->getMessage()}");
         return $response->withJson([
                    'error' => 1,
-                   'desc' => 'Error al registrar la puntuacion inicial del usuario' . $e->getMessage()], 400);
+                   'desc' => 'Error al registrar la puntuacion inicial del usuario ' . $e->getMessage()], 400);
    }
    return $response->withJson([
     'resp' => true,
@@ -143,7 +144,7 @@ $app->post('/signin', function(Request $request, Response $response, $args) {
     $pass_login = $data['pass'];
 
     try {
-        $user = Usuarios::all()->where("name", $user_login)->first();
+        $user = Users::where("name", $user_login)->first();
         $pass_user = $user['pass'];
 
         // Comprobar contraseña con la contraseña encriptada. 
@@ -168,16 +169,16 @@ $app->post('/signin', function(Request $request, Response $response, $args) {
 /**
  * Cambiar contraseña por parte del usuario
  */
-$app->put('/user/{user_name}', function(Request $request, Response $response, $args) {
+$app->put('/user', function(Request $request, Response $response, $args) {
     
     $this["logger"]->debug('PUT /user');
-    $user_name = $args['user_name'];
     $data = $request->getParsedBody();
+    $user_name = $data['user'];
     $pass_actual = $data['pass'];
     $new_pass = $data['new_pass'];
 
     try {
-        $user = Usuarios::all()->where("name", $user_name)->first();
+        $user = Users::where("name", $user_name)->first();
         $password_encript = $user['pass'];
 
         if (password_verify($pass_actual, $password_encript)){
@@ -214,7 +215,7 @@ $app->get('/temas', function(Request $request, Response $response, $args) {
     $this["logger"]->debug('GET /temas');
 
     try {
-        return $response->withJson(Temas::all());
+        return $response->withJson(Themes::all());
         
     } catch (Exception $e){
         $this["logger"]->error("ERROR: {$e->getMessage()}");
@@ -229,13 +230,13 @@ $app->get('/temas', function(Request $request, Response $response, $args) {
  * Consultar 5 preguntas aleatorias segun el tema especificado 
  * para el desarrollo del juego quiz.  
  */
-$app->get('/quiz/{tema}', function(Request $request, Response $response, $args){
+$app->get('/quiz/{theme}', function(Request $request, Response $response, $args){
 
     $this["logger"]->debug('GET /quiz');
 
-    $tema = $args['tema'];
+    $theme = $args['theme'];
     try {
-        return $response->withJson(Preguntas::all()->where('temas_cod', $tema)->random(5));
+        return $response->withJson(Questions::all()->where('theme_cod', $theme)->random(5));
 
     } catch (Exception $e){
         $this["logger"]->error("ERROR: {$e->getMessage()}");
@@ -247,14 +248,14 @@ $app->get('/quiz/{tema}', function(Request $request, Response $response, $args){
 
 
 /**
- * Consultar punrtuaciones de los usuarios
+ * Consultar puntuaciones de los usuarios
  */
 $app->get('/puntos', function(Request $request, Response $response, $args){
 
     $this["logger"]->debug('GET /puntos');
 
     try {
-        return $response->withJson(Puntos::all());
+        return $response->withJson(Points::all());
 
     } catch (Exception $e){
         $this["logger"]->error("ERROR: {$e->getMessage()}");
@@ -271,10 +272,11 @@ $app->get('/puntos', function(Request $request, Response $response, $args){
 $app->get('/puntos/{user}', function(Request $request, Response $response, $args){
     
     $this["logger"]->debug('GET /puntos');
-
     $user_name = $args['user'];
+
     try {
-        return $response->withJson(Puntos::all()->where('usuarios_name', $user_name)->first());
+        $user = Users::where('name', $user_name)->first();
+        return $response->withJson(Points::where('user_id', $user['id'])->first());
 
     } catch (Exception $e){
         $this["logger"]->error("ERROR: {$e->getMessage()}");
@@ -286,15 +288,16 @@ $app->get('/puntos/{user}', function(Request $request, Response $response, $args
 
 
 /**
- * Consultar preguntas de un usuario especifico
+ * Consultar todas las preguntas de un usuario especifico
  */
-$app->get('/preguntas/{usuario}', function(Request $request, Response $response, $args){
+$app->get('/preguntas/{user}', function(Request $request, Response $response, $args){
 
     $this["logger"]->debug('GET /preguntas');
 
-    $user = $args['usuario'];
+    $user_name = $args['user'];
     try {
-        return $response->withJson(Preguntas::all()->where('user_name', $user));
+        $user = Users::where('name', $user_name)->first();
+        return $response->withJson(Questions::all()->where('user_id', $user->id));
 
     } catch (Exception $e){
         $this["logger"]->error("ERROR: {$e->getMessage()}");
@@ -314,8 +317,15 @@ $app->get('/pregunta/{id}', function(Request $request, Response $response, $args
 
     $id = $args['id'];
     try {
-        return $response->withJson(Preguntas::all()->where('id', $id)->first());
+        $question = Questions::where('id', $id)->first();
+        
+        if ($question != null)
+            return $response->withJson($question);
 
+        return $response->withJson([
+            'resp' => false,
+            'desc' => 'Pregunta no encontrada'], 401);
+        
     } catch (Exception $e){
         $this["logger"]->error("ERROR: {$e->getMessage()}");
         return $response->withJson([
@@ -334,7 +344,7 @@ $app->get('/user/{usuario}', function(Request $request, Response $response, $arg
 
     $user = $args['usuario'];
     try {
-        return $response->withJson(Usuarios::all()->where('name', $user));
+        return $response->withJson(Users::where('name', $user)->first());
 
     } catch (Exception $e){
         $this["logger"]->error("ERROR: {$e->getMessage()}");
@@ -357,17 +367,17 @@ $app->post('/pregunta', function(Request $request, Response $response, $args) {
     $this["logger"]->debug('POST /preguntas');
 
     $data = $request->getParsedBody();
-    $question = new Preguntas();
-    $question->pregunta = $data['pregunta'];
-    $question->respcorrect = $data['respuesta_correcta'];
-    $question->respuno = $data['respuesta_uno'];
-    $question->respdos = $data['respuesta_dos'];
-    $question->resptres = $data['respuesta_tres'];
-    $question->user_name = $data['user'];
+    $question = new Questions();
+    $question->question = $data['question'];
+    $question->respcorrect = $data['respcorrect'];
+    $question->respaltone = $data['respaltone'];
+    $question->respalttwo = $data['respalttwo'];
+    $question->respaltthree = $data['respaltthree'];
+    $question->user_id = $data['id'];
 
-    $tema_name = $data['tema'];
-    $tema = Temas::all()->where("name", $tema_name)->first();
-    $question->temas_cod = $tema['cod'];
+    $theme_name = $data['theme'];
+    $theme = Themes::where("name", $theme_name)->first();
+    $question->theme_cod = $theme['cod'];
 
     try {
         $question->save();
@@ -379,7 +389,7 @@ $app->post('/pregunta', function(Request $request, Response $response, $args) {
         $this["logger"]->error("ERROR: {$e->getMessage()}");
         return $response->withJson([
                 'error' => 1,
-                'desc' => 'Error al guardar la pregunta' . $e->getMessage()], 400);
+                'desc' => 'Error al guardar la pregunta ' . $e->getMessage()], 400);
     }
 });
 
@@ -392,30 +402,29 @@ $app->post('/pregunta', function(Request $request, Response $response, $args) {
 /**
  * Modificar pregunta por parte del usuario.  
  */
-$app->put('/pregunta/{id}', function(Request $request, Response $response, $args) {
+$app->put('/pregunta', function(Request $request, Response $response, $args) {
     
     $this["logger"]->debug('PUT /pregunta');
-
-    $id = $args['id'];
     $data = $request->getParsedBody();
-    $pregunta = $data['pregunta'];
-    $respuesta_correcta = $data['respuesta_correcta'];
-    $respuesta_uno = $data['respuesta_uno'];
-    $respuesta_dos= $data['respuesta_dos'];
-    $respuesta_tres = $data['respuesta_tres'];
+    $quest = $data['question'];
+    $respcorrect = $data['respcorrect'];
+    $respaltone = $data['respaltone'];
+    $respalttwo= $data['respalttwo'];
+    $respaltthree = $data['respaltthree'];
+    $id = $data['id'];
 
-    $tema_name = $data['tema'];
-    $tema = Temas::all()->where("name", $tema_name)->first();
-    $cod_tema = $tema['cod'];
+    $theme_name = $data['theme'];
+    $theme = Themes::where("name", $theme_name)->first();
+    $theme_cod = $theme['cod'];
 
     try {
-        $question = Preguntas::all()->where('id', $id)->first();
-        $question->pregunta = $pregunta;
-        $question->respcorrect = $respuesta_correcta;
-        $question->respuno = $respuesta_uno;
-        $question->respdos = $respuesta_dos;
-        $question->resptres = $respuesta_tres;
-        $question->temas_cod = $cod_tema;
+        $question = Questions::where('id', $id)->first();
+        $question->question = $quest;
+        $question->respcorrect = $respcorrect;
+        $question->respaltone = $respaltone;
+        $question->respalttwo = $respalttwo;
+        $question->respaltthree = $respaltthree;
+        $question->theme_cod = $theme_cod;
         $question->save();
 
         return $response->withJson([
@@ -426,7 +435,7 @@ $app->put('/pregunta/{id}', function(Request $request, Response $response, $args
         $this["logger"]->error("ERROR: {$e->getMessage()}");
         return $response->withJson([
                 'error' => 1,
-                'desc' => 'Error al modificar la pregunta' . $e->getMessage()], 400);
+                'desc' => 'Error al modificar la pregunta ' . $e->getMessage()], 400);
     }
 });
 
@@ -439,16 +448,16 @@ $app->put('/puntos', function(Request $request, Response $response, $args) {
     $this["logger"]->debug('PUT /puntos');
 
     $data = $request->getParsedBody();
-    $user = $data['user'];
-    $puntos_obtenidos = $data['puntos'];
+    $user = $data['id'];
+    $pointsObtained = $data['points'];
 
     try {
-        $puntos = Puntos::all()->where('usuarios_name', $user)->first();
-        $puntos_actuales = $puntos->puntos;
+        $points = Points::where('user_id', $user)->first();
+        $currentPoints = $points->points;
 
-        $puntos_totales = $puntos_obtenidos + $puntos_actuales;
-        $puntos->puntos = $puntos_totales;
-        $puntos->save();
+        $totalPoints = $pointsObtained + $currentPoints;
+        $points->points = $totalPoints;
+        $points->save();
 
         return $response->withJson([
             'resp' => true,
@@ -458,12 +467,75 @@ $app->put('/puntos', function(Request $request, Response $response, $args) {
         $this["logger"]->error("ERROR: {$e->getMessage()}");
         return $response->withJson([
             'error' => 1,
-            'desc' => 'Error al modificar los puntos' . $e->getMessage()], 400);
+            'desc' => 'Error al modificar los puntos ' . $e->getMessage()], 400);
     }
     
 
 
 });
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Probar consulta Eloquente para user
+ */
+$app->get('/test/{name}', function(Request $request, Response $response, $args){
+
+    $this["logger"]->debug('GET test/user');
+
+	echo "<h1>Test User</h1><p>Buscando ... [".$args['name'] ."]";
+
+	$name=$args['name'];
+	// https://stackoverflow.com/questions/39270169/laravel-5-eloquent-how-to-get-raw-sql-that-is-being-executed-with-binded-data?noredirect=1&lq=1
+	$query= Users::where("name", $name);
+	echo "<p>SQL : </p><pre>";
+	echo $query->toSql();
+	echo "</pre>";
+    
+    $user = Users::where("name", $name)->first();
+	$recname = $user['name'];
+	echo "<pre>";
+	print_r($user);
+	echo "</pre>";
+	echo "<p>User []=$recname</p>";
+	
+	
+	$name=$args['name'];
+	// https://stackoverflow.com/questions/39270169/laravel-5-eloquent-how-to-get-raw-sql-that-is-being-executed-with-binded-data?noredirect=1&lq=1
+	$query= Users::whereRaw("name='$name'");
+	echo "<p>rawSQL : </p><pre>";
+	echo $query->toSql();
+	echo "</pre>";
+	
+    $user = Users::where("name", $name)->first();
+	$recname = $user['name'];
+	echo "<pre>";
+	print_r($user);
+	echo "</pre>";
+	echo "<p>User []=$recname</p>";	
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /**
