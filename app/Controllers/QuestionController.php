@@ -82,7 +82,7 @@ class QuestionController extends BaseController {
         $this->container["logger"]->debug('POST /preguntas');
 
         $data = $request->getParsedBody();
-        $question = new Questions();
+        $question = new Questions;
         $question->question = $data['question'];
         $question->respcorrect = $data['respcorrect'];
         $question->respaltone = $data['respaltone'];

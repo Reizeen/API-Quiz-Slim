@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Auth;
+use Illuminate\Support\Str;
 use Users;
 
 class Auth {
@@ -19,6 +20,25 @@ class Auth {
         }
 
         return false;
+    }
+
+
+    /**
+     * Verificando sesion con token 
+     */
+    public function checkSession($token){
+        $user = Users::where("token", $token)->first();
+        if(!$user)
+            return false;
+        return true;
+    }
+
+
+    /**
+     * Generar token
+     */
+    public function generateToken(){
+        return  Str::random(60);
     }
 
 

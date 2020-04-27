@@ -42,6 +42,8 @@ class UserController extends BaseController {
 
             if($auth){
                 $user = Users::where("name", $user_login)->first();
+                $user->token = $this->container->auth->generateToken();
+                $user->save();
                 return $response->withJson($user, 200);
             }
             
@@ -74,7 +76,7 @@ class UserController extends BaseController {
             if ($this->container->auth->checkEmail($user_email))
                 return $response->withJson([ 'resp' => false, 'desc' => 'Email ya registrado'], 200);
             
-            $user = new Users();
+            $user = new Users;
             $user->name = $user_name;
             $user->email = $user_email;
             $user->pass = $this->container->auth->encriptPassword($password);
@@ -90,7 +92,7 @@ class UserController extends BaseController {
         try {
             // Registro de la puntuacion incial del usuario
             $user_id = $user->id;
-            $points = new Points();
+            $points = new Points;
             $points->points = 0;
             $points->user_id = $user_id;
             $points->save();
