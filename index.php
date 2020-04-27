@@ -1,8 +1,11 @@
 <html>
   <head>
-    <title>Eric Trascarro</title>
+    <title>API QUIZ</title>
   </head>
   <body>
-	  <h1>Página de Eric 2ºDAM</h1>
+	  <h1>API QUIZ</h1>
+    <p>Proyecto de una API para el juego Quiz</p>
+    <p>Autor: Eric Trascastro Arias</p>
+    <p>Clase: 2º DAM</p>
   </body>
 </html>
