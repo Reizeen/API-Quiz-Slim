@@ -29,6 +29,34 @@ class UserController extends BaseController {
 
     /**
      * @POST
+     * Comprobar sesion con token
+     */
+    public function session($request, $response, $args){
+        $this->container["logger"]->debug('POST /session');
+        $data = $request->getParsedBody();
+        $id = $data['id'];
+        $token = $data['token'];
+
+        try {
+            $auth = $this->container->auth->checkToken($id, $token);
+
+            if ($auth)
+                return $response->withJson([ 'resp' => true, 'desc' => 'Hay sesion iniciada'], 200);
+            return $response->withJson([ 'resp' => false, 'desc' => 'No hay sesion iniciada'], 200);
+
+
+        } catch (Exception $e){
+            $this->container["logger"]->error("ERROR: {$e->getMessage()}");
+            return $response->withJson([
+                    'error' => 1,
+                    'desc' => 'Error procesando petición' . $e->getMessage()], 400);
+        }
+
+    }
+
+
+    /**
+     * @POST
      * Login de usuario
      */
     public function login($request, $response, $args){

@@ -6,6 +6,19 @@ use Users;
 
 class Auth {
 
+
+    /**
+     * Verificando session
+     */
+    public function checkToken($id, $token){
+        $user = Users::where("id", $id)->first();
+
+        if ($token == $user->token)
+            return true;
+        return false;
+    }
+
+
     /**
      * Verificando login
      */

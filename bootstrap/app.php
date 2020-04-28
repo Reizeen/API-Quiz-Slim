@@ -72,6 +72,6 @@ $container['auth'] = function($c){
 /**
  * Routes
  */
-require __DIR__ . '/../app/routes/routes.php';
+require __DIR__ . '/../app/Routes/routes.php';
 
 ?>
