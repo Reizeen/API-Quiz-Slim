@@ -88,7 +88,7 @@ class QuestionController extends BaseController {
         $question->respaltone = $data['respaltone'];
         $question->respalttwo = $data['respalttwo'];
         $question->respaltthree = $data['respaltthree'];
-        $question->user_id = $data['id'];
+        $question->user_id = $data['user_id'];
 
         $theme_name = $data['theme'];
         $theme = Themes::where("name", $theme_name)->first();

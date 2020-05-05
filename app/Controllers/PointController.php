@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Controllers;
+use Illuminate\Database\Capsule\Manager as DB;
 use Exception;
 use Points;
 
@@ -14,7 +15,13 @@ class PointController extends BaseController {
         $this->container["logger"]->debug('GET /puntos');
 
         try {
-            return $response->withJson(Points::all());
+            $points = DB::table('points')
+                        ->join('users', 'users.id', '=', 'points.user_id')
+                        ->select('points.id', 'points.points', 'users.name')
+                        ->orderBy('points.points', 'DESC')
+                        ->get();
+
+            return $response->withJson($points);
     
         } catch (Exception $e){
             $this->container["logger"]->error("ERROR: {$e->getMessage()}");
@@ -34,7 +41,12 @@ class PointController extends BaseController {
         $user_id = $args['id_user'];
 
         try {
-            return $response->withJson(Points::where('user_id', $user_id)->first());
+            $points = DB::table('points')
+                        ->where('user_id', $user_id)
+                        ->select('points.points')
+                        ->get();
+
+            return $response->withJson($points);
 
         } catch (Exception $e){
             $this->container["logger"]->error("ERROR: {$e->getMessage()}");
