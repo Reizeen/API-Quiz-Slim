@@ -10,7 +10,7 @@ class QuestionController extends BaseController {
 
     /**
      * @GET
-     * Muestra preguntas aleatorias de un tema para el juego
+     * Muestra 5 preguntas aleatorias de un tema para el juego
      */
     public function gameQuiz($request, $response, $args){
         $this->container["logger"]->debug('GET /quiz');
@@ -144,6 +144,30 @@ class QuestionController extends BaseController {
             return $response->withJson([
                     'error' => 1,
                     'desc' => 'Error al modificar la pregunta ' . $e->getMessage()], 400);
+        }
+    }
+
+
+    /**
+     * @DELETE
+     * Borrar pregunta
+     */
+    public function deleteQuestion($request, $response, $args){
+        $this->container["logger"]->debug('DELETE /pregunta');
+        $id = $$args['id'];
+
+        try {
+            $question = Questions::where('id', $id)->first();
+            $question->delete();
+
+            return $response->withJson([
+                'resp' => true, 'desc' => 'Pregunta borrada'], 200);
+            
+        } catch (Exception $e){
+            $this->container["logger"]->error("ERROR: {$e->getMessage()}");
+            return $response->withJson([
+                    'error' => 1,
+                    'desc' => 'Error procesando petición ' . $e->getMessage()], 400);
         }
     }
 }

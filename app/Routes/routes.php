@@ -36,6 +36,7 @@ $app->group('', function() use($app){
     $app->get('/question/{id}', 'QuestionController:getQuestion');
     $app->post('/question', 'QuestionController:addQuestion');
     $app->put('/question', 'QuestionController:setQuestion');
+    $app->delete('/question/{id}', 'QuestionController:deleteQuestion');
 })->add(new AuthMiddleware($container));
 
 
