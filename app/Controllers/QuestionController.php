@@ -1,9 +1,11 @@
 <?php
 
 namespace App\Controllers;
+use Illuminate\Database\Capsule\Manager as DB;
 use Exception;
 use Questions;
 use Themes;
+use Users;
 
 class QuestionController extends BaseController {
 
@@ -17,7 +19,16 @@ class QuestionController extends BaseController {
         $theme = $args['theme'];
 
         try {
-            return $response->withJson(Questions::all()->where('theme_cod', $theme)->random(5));
+            $questions = DB::table('questions')
+                ->join('users', 'users.id', '=', 'questions.user_id')
+                ->join('themes', 'themes.cod', '=', 'questions.theme_cod')
+                ->select('questions.id', 'questions.question', 'questions.respcorrect', 'questions.respaltone', 
+                         'questions.respalttwo', 'respaltthree', 'themes.name as theme', 'users.name as user')
+                ->where('questions.theme_cod', '=', $theme)
+                ->inRandomOrder()
+                ->get();
+
+            return $response->withJson($questions->random(5));
 
         } catch (Exception $e){
             $this->container["logger"]->error("ERROR: {$e->getMessage()}");
@@ -37,7 +48,16 @@ class QuestionController extends BaseController {
         $user_id = $args['id_user'];
 
         try {
-            return $response->withJson(Questions::all()->where('user_id', $user_id));
+            $questions = DB::table('questions')
+                ->join('users', 'users.id', '=', 'questions.user_id')
+                ->join('themes', 'themes.cod', '=', 'questions.theme_cod')
+                ->select('questions.id', 'questions.question', 'questions.respcorrect', 'questions.respaltone', 
+                         'questions.respalttwo', 'respaltthree', 'themes.name as theme', 'users.name as user')
+                ->where('questions.user_id', '=', $user_id)
+                ->orderBy('questions.id', 'DESC')
+                ->get();
+        
+            return $response->withJson($questions);
     
         } catch (Exception $e){
             $this->container["logger"]->error("ERROR: {$e->getMessage()}");
@@ -57,8 +77,16 @@ class QuestionController extends BaseController {
         $id = $args['id'];
 
         try {
-            $question = Questions::where('id', $id)->first();
-            
+            $question = DB::table('questions')
+                ->join('users', 'users.id', '=', 'questions.user_id')
+                ->join('themes', 'themes.cod', '=', 'questions.theme_cod')
+                ->select('questions.id', 'questions.question', 'questions.respcorrect', 'questions.respaltone', 
+                         'questions.respalttwo', 'respaltthree', 'themes.name as theme', 'users.name as user')
+                ->where('questions.id', '=', $id)
+                ->orderBy('questions.id', 'DESC')
+                ->get()
+                ->first();
+                    
             if ($question != null)
                 return $response->withJson($question);
 
@@ -88,7 +116,10 @@ class QuestionController extends BaseController {
         $question->respaltone = $data['respaltone'];
         $question->respalttwo = $data['respalttwo'];
         $question->respaltthree = $data['respaltthree'];
-        $question->user_id = $data['user_id'];
+        
+        $user_name = $data['user'];
+        $user = Users::where("name", $user_name)->first();
+        $question->user_id = $user["id"];
 
         $theme_name = $data['theme'];
         $theme = Themes::where("name", $theme_name)->first();
@@ -154,7 +185,7 @@ class QuestionController extends BaseController {
      */
     public function deleteQuestion($request, $response, $args){
         $this->container["logger"]->debug('DELETE /pregunta');
-        $id = $$args['id'];
+        $id = $args['id'];
 
         try {
             $question = Questions::where('id', $id)->first();
