@@ -19,11 +19,9 @@ class QuestionController extends BaseController {
         $theme = $args['theme'];
 
         try {
-            $questions = DB::table('questions')
-                ->join('users', 'users.id', '=', 'questions.user_id')
+            $questions = Questions::join('users', 'users.id', '=', 'questions.user_id')
                 ->join('themes', 'themes.cod', '=', 'questions.theme_cod')
-                ->select('questions.id', 'questions.question', 'questions.respcorrect', 'questions.respaltone', 
-                         'questions.respalttwo', 'respaltthree', 'themes.name as theme', 'users.name as user')
+                ->select('questions.id', 'questions.question', 'questions.answers', 'themes.name as theme', 'users.name as user')
                 ->where('questions.theme_cod', '=', $theme)
                 ->inRandomOrder()
                 ->get();
@@ -48,17 +46,15 @@ class QuestionController extends BaseController {
         $user_id = $args['id_user'];
 
         try {
-            $questions = DB::table('questions')
-                ->join('users', 'users.id', '=', 'questions.user_id')
-                ->join('themes', 'themes.cod', '=', 'questions.theme_cod')
-                ->select('questions.id', 'questions.question', 'questions.respcorrect', 'questions.respaltone', 
-                         'questions.respalttwo', 'respaltthree', 'themes.name as theme', 'users.name as user')
-                ->where('questions.user_id', '=', $user_id)
-                ->orderBy('questions.id', 'DESC')
-                ->get();
+            $questions = Questions::join('users', 'users.id', '=', 'questions.user_id')
+                            ->join('themes', 'themes.cod', '=', 'questions.theme_cod')
+                            ->select('questions.id', 'questions.question', 'questions.answers', 'themes.name as theme', 'users.name as user')
+                            ->where('questions.user_id', '=', $user_id)
+                            ->orderBy('questions.id', 'DESC')
+                            ->get();
         
-            return $response->withJson($questions);
-    
+                return $response->withJson($questions);
+            
         } catch (Exception $e){
             $this->container["logger"]->error("ERROR: {$e->getMessage()}");
             return $response->withJson([
@@ -77,15 +73,13 @@ class QuestionController extends BaseController {
         $id = $args['id'];
 
         try {
-            $question = DB::table('questions')
-                ->join('users', 'users.id', '=', 'questions.user_id')
-                ->join('themes', 'themes.cod', '=', 'questions.theme_cod')
-                ->select('questions.id', 'questions.question', 'questions.respcorrect', 'questions.respaltone', 
-                         'questions.respalttwo', 'respaltthree', 'themes.name as theme', 'users.name as user')
-                ->where('questions.id', '=', $id)
-                ->orderBy('questions.id', 'DESC')
-                ->get()
-                ->first();
+            $question = Questions::join('users', 'users.id', '=', 'questions.user_id')
+                            ->join('themes', 'themes.cod', '=', 'questions.theme_cod')
+                            ->select('questions.id', 'questions.question', 'questions.answers', 'themes.name as theme', 'users.name as user')
+                            ->where('questions.id', '=', $id)
+                            ->orderBy('questions.id', 'DESC')
+                            ->get()
+                            ->first();
                     
             if ($question != null)
                 return $response->withJson($question);
@@ -112,10 +106,7 @@ class QuestionController extends BaseController {
         $data = $request->getParsedBody();
         $question = new Questions;
         $question->question = $data['question'];
-        $question->respcorrect = $data['respcorrect'];
-        $question->respaltone = $data['respaltone'];
-        $question->respalttwo = $data['respalttwo'];
-        $question->respaltthree = $data['respaltthree'];
+        $question->answers =  $data['answers'];
         
         $user_name = $data['user'];
         $user = Users::where("name", $user_name)->first();
@@ -146,10 +137,7 @@ class QuestionController extends BaseController {
         $this->container["logger"]->debug('PUT /pregunta');
         $data = $request->getParsedBody();
         $quest = $data['question'];
-        $respcorrect = $data['respcorrect'];
-        $respaltone = $data['respaltone'];
-        $respalttwo= $data['respalttwo'];
-        $respaltthree = $data['respaltthree'];
+        $answers = $data['answers'];
         $id = $data['id'];
 
         $theme_name = $data['theme'];
@@ -159,10 +147,7 @@ class QuestionController extends BaseController {
         try {
             $question = Questions::where('id', $id)->first();
             $question->question = $quest;
-            $question->respcorrect = $respcorrect;
-            $question->respaltone = $respaltone;
-            $question->respalttwo = $respalttwo;
-            $question->respaltthree = $respaltthree;
+            $question->answers = $answers;
             $question->theme_cod = $theme_cod;
             $question->save();
 
