@@ -6,6 +6,7 @@ require __DIR__ . '/../Models/Themes.php';
 require __DIR__ . '/../Models/Questions.php';
 require __DIR__ . '/../Models/Users.php';
 require __DIR__ . '/../Models/Points.php';
+require __DIR__ . '/../Models/Reports.php';
 
 
 /**
@@ -49,5 +50,9 @@ $app->group('', function() use($app){
     $app->put('/points', 'PointController:setPoints');
 })->add(new AuthMiddleware($container));
 
+/**
+ * ReportController
+ */
+$app->post('/report', 'ReportController:setReport')->add(new AuthMiddleware($container));
 
 ?>

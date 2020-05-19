@@ -61,6 +61,10 @@ $container['PointController'] = function($c){
     return new \App\Controllers\PointController($c);
 };
 
+$container['ReportController'] = function($c){
+    return new \App\Controllers\ReportController($c);
+};
+
 
 /**
  * Authentication

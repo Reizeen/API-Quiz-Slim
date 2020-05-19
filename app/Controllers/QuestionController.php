@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Controllers;
-use Illuminate\Database\Capsule\Manager as DB;
 use Exception;
 use Questions;
 use Themes;

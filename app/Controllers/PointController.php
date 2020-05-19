@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Controllers;
-use Illuminate\Database\Capsule\Manager as DB;
 use Exception;
 use Points;
 
@@ -15,11 +14,11 @@ class PointController extends BaseController {
         $this->container["logger"]->debug('GET /puntos');
 
         try {
-            $points = DB::table('points')
-                        ->join('users', 'users.id', '=', 'points.user_id')
-                        ->select('points.id', 'points.points', 'users.name')
-                        ->orderBy('points.points', 'DESC')
-                        ->get();
+            $points = Points::join('users', 'users.id', '=', 'points.user_id')
+                            ->select('points.id', 'points.points', 'users.name')
+                            ->orderBy('points.points', 'DESC')
+                            ->get();
+
 
             return $response->withJson($points);
     
@@ -41,12 +40,11 @@ class PointController extends BaseController {
         $user_id = $args['id_user'];
 
         try {
-            $points = DB::table('points')
-                        ->where('user_id', $user_id)
+            $point = Points::where('user_id', $user_id)
                         ->select('points.points')
-                        ->get();
-
-            return $response->withJson($points);
+                        ->first();
+            
+            return $response->withJson($point);
 
         } catch (Exception $e){
             $this->container["logger"]->error("ERROR: {$e->getMessage()}");
@@ -66,7 +64,7 @@ class PointController extends BaseController {
         $data = $request->getParsedBody();
         $user = $data['id'];
         $pointsObtained = $data['points'];
-
+        
         try {
             $points = Points::where('user_id', $user)->first();
             $currentPoints = $points->points;
