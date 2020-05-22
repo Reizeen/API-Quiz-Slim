@@ -136,6 +136,59 @@ class UserController extends BaseController {
             'resp' => true, 'desc' => 'Usuario registrado satisfactoriamente'], 201);
     }
 
+    /**
+     * @POST 
+     * Enviar correo al usuario para recuperar la contraseña
+     */
+    public function sendEmail($request, $response, $args){
+        $this->container["logger"]->debug('POST /email');
+        $data = $request->getParsedBody();
+        $email = $data['email'];
+
+        try {
+            $auth = $this->container->auth->checkEmail($email);
+
+            if (!$auth)
+                return $response->withJson(['resp' => false, 'desc' => 'Email no registrado'], 200);
+            
+            $user = Users::where("email", $email)->first();
+            $new_pass = $user->pass = $this->container->auth->generatePassword();
+            $user->pass = $this->container->auth->encriptPassword($new_pass);
+            $user->save();
+            
+            $subject = "Recuperación de la contraseña";
+            $message = "
+            <html>
+            <head>
+              <title>" . $subject . "</title>
+            </head>
+            <body>
+                <table>
+                    <tr>
+                        <td><span style='font-size:15px'>La nueva contraseña para <strong>" . $user->name . "</strong> es: <strong>". $new_pass . "</strong><br/></td>
+                    </tr>
+                    <tr>
+                        <td><em>Cuando inicie sesion no olvide cambiar la contraseña en su perfil.</em></span></td>
+                    </tr>
+                </table>
+                </body>
+            </html>";
+            $headers = "From: QUIZ <no-reply@quizeric.com>" . "\r\n";
+            $headers .= "MIME-Version: 1.0" . "\r\n";
+            $headers .= "Content-type: text/html; charset=iso-8859-1" . "\r\n";        
+
+            mail($email, $subject, $message, $headers);
+
+            return $response->withJson(['resp' => true, 'desc' => 'Enviado: accede a tu Email'], 200);
+        
+        } catch (Exception $e){
+            $this->container["logger"]->error("ERROR: {$e->getMessage()}");
+            return $response->withJson([
+                    'error' => 1,
+                    'desc' => 'Error procesando petición' . $e->getMessage()], 400);
+        }
+    }
+
 
     /**
      * @PUT
@@ -159,7 +212,7 @@ class UserController extends BaseController {
                 return $response->withJson(['resp' => true, 'desc' => 'Contraseña cambiada satisfactoriamente'], 201);       
             }
     
-            return $response->withJson(['resp' => false, 'desc' => 'Contraseña actual incorrecta'], 401);
+            return $response->withJson(['resp' => false, 'desc' => 'Contraseña actual incorrecta'], 200);
 
         } catch (Exception $e){
             $this->container["logger"]->error("ERROR: {$e->getMessage()}");

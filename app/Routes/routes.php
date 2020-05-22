@@ -15,6 +15,7 @@ require __DIR__ . '/../Models/Reports.php';
 $app->post('/signin', 'UserController:login');
 $app->post('/signup', 'UserController:register');
 $app->post('/session', 'UserController:session');
+$app->post('/email', 'UserController:sendEmail');
 
 $app->group('', function() use($app){
     $app->get('/user/{id}', 'UserController:getUser');

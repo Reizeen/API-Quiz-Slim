@@ -90,6 +90,24 @@ class Auth {
         $password_encript = password_hash($password, PASSWORD_DEFAULT, array("cost"=>15));
         return $password_encript;
     }
+
+
+    /**
+     * Generador de contraseñas
+     */
+    public function generatePassword(){
+        $cadena_base =  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+        $cadena_base .= '0123456789' ;
+        $cadena_base .= '!@#%^&*()_,./<>?;:[]{}\|=+';
+      
+        $password = '';
+        $limite = strlen($cadena_base) - 1;
+      
+        for ($i=0; $i < 5; $i++)
+          $password .= $cadena_base[rand(0, $limite)];
+      
+        return $password;
+    }
     
 }
 
