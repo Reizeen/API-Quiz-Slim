@@ -63,16 +63,36 @@ class PointController extends BaseController {
         $this->container["logger"]->debug('PUT /puntos');
         $data = $request->getParsedBody();
         $user = $data['id'];
-        $pointsObtained = $data['points'];
+        $correctAnswers = $data['answers'];
+
+        switch($correctAnswers) {
+            case 5: 
+                $new_points = 100;
+                break;
+            case 4:
+                $new_points = 60;
+                break;
+            case 3: 
+                $new_points = 40;
+                break;
+            case 2:
+                $new_points = 20;
+                break;
+            case 1:
+                $new_points = 10;
+                break;
+            default:
+                $new_points = 0;
+        }
         
         try {
             $points = Points::where('user_id', $user)->first();
             $currentPoints = $points->points;
-            $totalPoints = $pointsObtained + $currentPoints;
+            $totalPoints = $new_points + $currentPoints;
             $points->points = $totalPoints;
             $points->save();
 
-            return $response->withJson([ 'resp' => true, 'desc' => 'Puntos añadidos satisfactoriamente'], 201);
+            return $response->withJson([ 'resp' => $new_points, 'desc' => 'Puntos añadidos satisfactoriamente'], 201);
 
         } catch(Exception $e){
             $this->container["logger"]->error("ERROR: {$e->getMessage()}");

@@ -157,26 +157,16 @@ class UserController extends BaseController {
             $user->save();
             
             $subject = "Recuperación de la contraseña";
-            $message = "
-            <html>
-            <head>
-              <title>" . $subject . "</title>
-            </head>
-            <body>
-                <table>
-                    <tr>
-                        <td><span style='font-size:15px'>La nueva contraseña para <strong>" . $user->name . "</strong> es: <strong>". $new_pass . "</strong><br/></td>
-                    </tr>
-                    <tr>
-                        <td><em>Cuando inicie sesion no olvide cambiar la contraseña en su perfil.</em></span></td>
-                    </tr>
-                </table>
-                </body>
-            </html>";
+            $data = [
+                'subject' => $subject,
+                'user' => $user->name,
+                'pass' => $new_pass
+            ];
+            $message = $this->container->view->render($response, 'email.html', $data);
             $headers = "From: QUIZ <no-reply@quizeric.com>" . "\r\n";
             $headers .= "MIME-Version: 1.0" . "\r\n";
             $headers .= "Content-type: text/html; charset=iso-8859-1" . "\r\n";        
-
++
             mail($email, $subject, $message, $headers);
 
             return $response->withJson(['resp' => true, 'desc' => 'Enviado: accede a tu Email'], 200);

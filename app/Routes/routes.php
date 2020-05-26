@@ -55,5 +55,4 @@ $app->group('', function() use($app){
  * ReportController
  */
 $app->post('/report', 'ReportController:setReport')->add(new AuthMiddleware($container));
-
 ?>

@@ -21,10 +21,28 @@ $app = new \Slim\App([
 ]);
 
 
+
+$container = $app->getContainer();
+
+/**
+ * View configuration
+ */
+$container['view'] = function ($container) {
+    $view = new \Slim\Views\Twig('../resources/views', [
+        'cache' => false
+    ]);
+
+    $view->addExtension(new \Slim\Views\TwigExtension (
+        $container->router,
+        $container->request->getUri()
+    ));
+    return $view;
+};
+
+
 /**
  * Log configuration
  */
-$container = $app->getContainer();
 $container['logger'] = function($c) {
     $logger = new \Monolog\Logger('LOG');
     $file_handler = new \Monolog\Handler\StreamHandler('../logs/app.log');
@@ -72,6 +90,7 @@ $container['ReportController'] = function($c){
 $container['auth'] = function($c){
     return new \App\Auth\Auth;
 };
+
 
 /**
  * Routes
