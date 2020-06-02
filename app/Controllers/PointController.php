@@ -92,7 +92,7 @@ class PointController extends BaseController {
             $points->points = $totalPoints;
             $points->save();
 
-            return $response->withJson([ 'resp' => $new_points, 'desc' => 'Puntos añadidos satisfactoriamente'], 201);
+            return $response->withJson([ 'resp' => true, 'desc' => $new_points], 201);
 
         } catch(Exception $e){
             $this->container["logger"]->error("ERROR: {$e->getMessage()}");
